@@ -118,80 +118,80 @@ class BirthRegistrationCreateService:
     #     )
     #     self.wf_service.transition_process([proc_inst], request_info=request_info)
 
-    def _process_workflow_transition(self, birth_app, request_info):
-        # Create user info with roles
-        roles = [
-            Role(
-                name="Employee",
-                code="EMPLOYEE",
-                tenant_id=birth_app.tenant_id
-            ),
-            Role(
-                name="System user",
-                code="SYSTEM",
-                tenant_id=birth_app.tenant_id
-            )
-        ]
+    # def _process_workflow_transition(self, birth_app, request_info):
+    #     # Create user info with roles
+    #     roles = [
+    #         Role(
+    #             name="Employee",
+    #             code="EMPLOYEE",
+    #             tenant_id=birth_app.tenant_id
+    #         ),
+    #         Role(
+    #             name="System user",
+    #             code="SYSTEM",
+    #             tenant_id=birth_app.tenant_id
+    #         )
+    #     ]
         
-        # Get auth token from environment
-        auth_token = os.getenv("ACCESS_TOKEN")
+    #     # Get auth token from environment
+    #     auth_token = os.getenv("ACCESS_TOKEN")
         
-        # Create user info
-        user_info = UserBuilder()\
-            .with_id(birth_app.applicant_user_id)\
-            .with_user_name(str(uuid.uuid4()))\
-            .with_uuid(str(uuid.uuid4()))\
-            .with_type("EMPLOYEE")\
-            .with_name(birth_app.father_of_applicant)\
-            .with_mobile_number(birth_app.father_mobile_number)\
-            .with_email(f"{birth_app.father_of_applicant.lower().replace(' ', '')}@egovernments.org")\
-            .with_roles(roles)\
-            .with_tenant_id(birth_app.tenant_id)\
-            .build()
+    #     # Create user info
+    #     user_info = UserBuilder()\
+    #         .with_id(birth_app.applicant_user_id)\
+    #         .with_user_name(str(uuid.uuid4()))\
+    #         .with_uuid(str(uuid.uuid4()))\
+    #         .with_type("EMPLOYEE")\
+    #         .with_name(birth_app.father_of_applicant)\
+    #         .with_mobile_number(birth_app.father_mobile_number)\
+    #         .with_email(f"{birth_app.father_of_applicant.lower().replace(' ', '')}@egovernments.org")\
+    #         .with_roles(roles)\
+    #         .with_tenant_id(birth_app.tenant_id)\
+    #         .build()
         
-        # Initialize RequestConfig with user info
-        RequestConfig.initialize(
-            api_id="DIGIT-CLIENT",
-            version="1.0.0",
-            user_info=user_info.to_dict(),
-            auth_token=auth_token
-        )
+    #     # Initialize RequestConfig with user info
+    #     RequestConfig.initialize(
+    #         api_id="DIGIT-CLIENT",
+    #         version="1.0.0",
+    #         user_info=user_info.to_dict(),
+    #         auth_token=auth_token
+    #     )
         
-        # Create state for transition
-        state = StateBuilder()\
-            .with_uuid(str(uuid.uuid4()))\
-            .with_state("APPROVED")\
-            .build()
+    #     # Create state for transition
+    #     state = StateBuilder()\
+    #         .with_uuid(str(uuid.uuid4()))\
+    #         .with_state("APPROVED")\
+    #         .build()
         
-        # Create workflow action
-        action = WorkflowActionBuilder()\
-            .with_action("APPROVE")\
-            .with_uuid(str(uuid.uuid4()))\
-            .with_next_state("APPROVED")\
-            .with_roles(["EMPLOYEE"])\
-            .build()
+    #     # Create workflow action
+    #     action = WorkflowActionBuilder()\
+    #         .with_action("APPROVE")\
+    #         .with_uuid(str(uuid.uuid4()))\
+    #         .with_next_state("APPROVED")\
+    #         .with_roles(["EMPLOYEE"])\
+    #         .build()
         
-        # Create process instance
-        process_instance = ProcessInstanceBuilder()\
-            .with_id(str(uuid.uuid4()))\
-            .with_tenant_id(birth_app.tenant_id)\
-            .with_business_service("BTR")\
-            .with_business_id(birth_app.application_number)\
-            .with_action("APPROVE")\
-            .with_state(state)\
-            .with_module_name("birth-services")\
-            .build()
+    #     # Create process instance
+    #     process_instance = ProcessInstanceBuilder()\
+    #         .with_id(str(uuid.uuid4()))\
+    #         .with_tenant_id(birth_app.tenant_id)\
+    #         .with_business_service("BTR")\
+    #         .with_business_id(birth_app.application_number)\
+    #         .with_action("APPROVE")\
+    #         .with_state(state)\
+    #         .with_module_name("birth-services")\
+    #         .build()
         
-        # Get request info
-        request_info = RequestConfig.get_request_info(
-            action="POST",
-            msg_id=str(uuid.uuid4())
-        )
+    #     # Get request info
+    #     request_info = RequestConfig.get_request_info(
+    #         action="POST",
+    #         msg_id=str(uuid.uuid4())
+    #     )
         
-        # Make the transition request
-        result = self.wf_service.transition_process(
-            process_instances=[process_instance],
-            request_info=request_info
-        )
+    #     # Make the transition request
+    #     result = self.wf_service.transition_process(
+    #         process_instances=[process_instance],
+    #         request_info=request_info
+    #     )
         
-        print("Transition Result:", result) 
+    #     print("Transition Result:", result) 
