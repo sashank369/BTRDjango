@@ -3,7 +3,7 @@ from pprint import pprint
 
 
 # Initialize with default auth token
-auth_token = "ed781948-9805-4dd8-a664-e8581524e8c8"
+auth_token = "9d265031-5edc-4e3e-96ca-1bb087a6a517"
 # roles=[
 #     (RoleBuilder()
 #         .with_code("CITIZEN")
@@ -48,7 +48,7 @@ user_service = UserService()
 
 # Example 1: Create a basic citizen user with minimum required fields
 basic_citizen = (UserSearchModelBuilder()  
-    .with_id([53745])
+    .with_id([53804])
     .with_tenant_id("DIGITCLIENT")
     .build())  # Will automatically add CITIZEN role
 

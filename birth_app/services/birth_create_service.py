@@ -2,6 +2,17 @@ from ..models import BirthRegistrationApplication
 from digit_client import CitizenUserBuilder, RequestConfig, RoleBuilder
 from digit_client.services import UserService, WorkflowV2Service
 from digit_client.models import ProcessInstance, Role, UserBuilder, StateBuilder, WorkflowActionBuilder, ProcessInstanceBuilder
+from digit_client.services.idrequest import IdRequestService
+from digit_client.models import IdRequest, IdRequestBuilder,Role,UserBuilder
+from digit_client.request_config import RequestConfig, RequestInfo
+from ..models import (
+    BirthRegistrationApplication,
+    AuditDetails,
+    Workflow,
+    Address,
+    FatherApplicant,
+    MotherApplicant
+)
 import uuid
 import os
 
@@ -11,14 +22,21 @@ class BirthRegistrationCreateService:
         self.wf_service = WorkflowV2Service()   
 
     def create_birth_registration(self, app_data, request_info):
+
+        #-----------------------------------------------------------------------------------------------------------------------
+        #Validator
         # Validate required fields
         required_fields = ['tenantId', 'babyFirstName', 'fatherOfApplicant', 'motherOfApplicant', 'timeOfBirth']
         for field in required_fields:
             if not app_data.get(field):
                 raise ValueError(f"Required field '{field}' is missing")
+            
 
-        # Handle applicant creation if needed
-        auth_token = "ed781948-9805-4dd8-a664-e8581524e8c8"
+
+        
+        #-----------------------------------------------------------------------------------------------------------------------
+        #Configs for client libararies
+        auth_token = "9d265031-5edc-4e3e-96ca-1bb087a6a517"
         roles=[
             (RoleBuilder()
                 .with_code("CITIZEN")
@@ -34,31 +52,86 @@ class BirthRegistrationCreateService:
                 .with_code("ADMIN") 
                 .with_name("Administrator")
                 .with_tenant_id("DIGITCLIENT")
+                .build()),
+            (RoleBuilder()
+                .with_code("SUPERUSER") 
+                .with_name("Super User")
+                .with_tenant_id("DIGITCLIENT")
                 .build())
         ]
-        userinfo = (UserBuilder()
-            .with_id(10)
-            .with_user_name("sashank.budideti@egovernments.org")
-            .with_tenant_id("DIGITCLIENT")
-            .with_type("CITIZEN")
-            .with_roles(roles)
-            .with_mobile_number("9353822215")
-            .with_email("sashank.budideti@egovernments.org")
-            .with_name("Sashank")
-            .with_uuid("123567102")
-            .build())
         RequestConfig.initialize(
                     api_id="DIGIT-CLIENT",
                     version="1.0.0",
-                    user_info=userinfo.to_dict(),
                     auth_token=auth_token
                 )
+
+
+        #-----------------------------------------------------------------------------------------------------------------------
+        # #Enrichment
+        # id_request_service = IdRequestService()
+        # # Create user info
+        # roles = [
+        #     Role(
+        #         name="Employee",
+        #         code="EMPLOYEE",
+        #         tenant_id="LMN"
+        #     ),
+        #     Role(
+        #         name="System user",
+        #         code="SYSTEM",
+        #         tenant_id="LMN"
+        #     )
+        # ]
+        
+        # auth_token = "0e9b955f-5e25-4809-b680-97ef37ccf53f"
+        # user_info = UserBuilder()\
+        #     .with_id(181)\
+        #     .with_user_name("TestEggMUSTAKIMNK")\
+        #     .with_uuid("4f6cf5fa-bcb2-4a3a-9dff-9740c04e3a92")\
+        #     .with_type("EMPLOYEE")\
+        #     .with_name("mustak")\
+        #     .with_mobile_number("1234567890")\
+        #     .with_email("xyz@egovernments.org")\
+        #     .with_roles(roles)\
+        #     .with_tenant_id("LMN")\
+        #     .build()
+        
+        # # Initialize RequestConfig with user info
+        # RequestConfig.initialize(
+        #     api_id="DIGIT-CLIENT",
+        #     version="1.0.0",
+        #     user_info=user_info.to_dict(),
+        #     auth_token=auth_token
+        # )
+        # # Create an IdRequest object
+        # id_request = IdRequestBuilder()\
+        #     .with_id_name("test_id_name")\
+        #     .with_tenant_id("test_tenant_id")\
+        #     .with_format("test_format")\
+        #     .build()
+
+        # # Generate IDs
+        # result = id_request_service.generate_id(id_request)
+        # print(result)
+
+
+
+
+
+
+
+
+        #-----------------------------------------------------------------------------------------------------------------------
+        #Create Birth Registration Application User Service
+        # Handle applicant creation if needed
+        
+        
         applicant = app_data.get('fatherOfApplicant')
         user_id = None
         user_response = None
         if applicant:
             basic_citizen = (CitizenUserBuilder()
-                .with_user_name("292251901")
+                .with_user_name(app_data.get('fatherOfApplicant', {}).get('userName', ''))
                 .with_password("Mus@123NK")
                 .with_name("maqwkskd")
                 .with_gender("MALE")
@@ -72,6 +145,7 @@ class BirthRegistrationCreateService:
             # print("basic_citizen", basic_citizen.to_dict())
             user_response = self.user_service.create_user_no_validate(basic_citizen)
             # user_id = user_response.get('user', {}).get('id')
+            print("user_response\n", user_response)
             users = user_response.get('user', [])
             user_id = users[0].get('id') if users and isinstance(users[0], dict) else None
 
@@ -79,21 +153,86 @@ class BirthRegistrationCreateService:
         # print("\nuser response", user_response)
         print("user_id:\n", user_id)
 
-        birth_app = BirthRegistrationApplication.objects.create(
+
+
+
+
+
+        #-----------------------------------------------------------------------------------------------------------------------
+        #Saving into database 
+        address = Address.objects.create(
             tenant_id=app_data['tenantId'],
+            door_no=app_data.get('address', {}).get('doorNo', ''),
+            latitude=app_data.get('address', {}).get('latitude', ''),
+            longitude=app_data.get('address', {}).get('longitude', ''),
+            address_number=app_data.get('address', {}).get('addressNumber', ''),
+            type=app_data.get('address', {}).get('type', ''),
+            detail=app_data.get('address', {}).get('detail', ''),
+            building_name=app_data.get('address', {}).get('buildingName', ''),
+            street=app_data.get('address', {}).get('street', ''),
+            locality=app_data.get('address', {}).get('locality', '')
+        )
+        father_applicant = FatherApplicant.objects.create(
+            uuid=str(uuid.uuid4()),
+            user_name=app_data.get('fatherOfApplicant', {}).get('userName', ''),
+            name=app_data.get('fatherOfApplicant', {}).get('name', ''),
+            mobile_number=app_data.get('fatherOfApplicant', {}).get('mobileNumber', ''),
+            email=app_data.get('fatherOfApplicant', {}).get('email', ''),
+            pan=app_data.get('fatherOfApplicant', {}).get('pan', ''),
+            aadhaar_number=app_data.get('fatherOfApplicant', {}).get('aadhaarNumber', ''),
+            alt_contact_number=app_data.get('fatherOfApplicant', {}).get('altContactNumber', ''),
+            locale=app_data.get('fatherOfApplicant', {}).get('locale', ''),
+            type=app_data.get('fatherOfApplicant', {}).get('type', ''),
+            signature=app_data.get('fatherOfApplicant', {}).get('signature', ''),
+            otp_reference=app_data.get('fatherOfApplicant', {}).get('otpReference', ''),
+            tenant_id=app_data['tenantId']
+        )
+        mother_applicant = MotherApplicant.objects.create(
+            uuid=str(uuid.uuid4()),
+            user_name=app_data.get('motherOfApplicant', {}).get('userName', ''),
+            name=app_data.get('motherOfApplicant', {}).get('name', ''),
+            mobile_number=app_data.get('motherOfApplicant', {}).get('mobileNumber', ''),
+            email=app_data.get('motherOfApplicant', {}).get('email', ''),
+            dob=app_data.get('motherOfApplicant', {}).get('dob'),
+            gender=app_data.get('motherOfApplicant', {}).get('gender', ''),
+            pan=app_data.get('motherOfApplicant', {}).get('pan', ''),
+            aadhaar_number=app_data.get('motherOfApplicant', {}).get('aadhaarNumber', ''),
+            alt_contact_number=app_data.get('motherOfApplicant', {}).get('altContactNumber', ''),
+            locale=app_data.get('motherOfApplicant', {}).get('locale', ''),
+            type=app_data.get('motherOfApplicant', {}).get('type', ''),
+            signature=app_data.get('motherOfApplicant', {}).get('signature', ''),
+            otp_reference=app_data.get('motherOfApplicant', {}).get('otpReference', ''),
+            tenant_id=app_data['tenantId']
+        )
+        audit_details = AuditDetails.objects.create(
+            created_by=app_data.get('requestInfo', {}).get('userInfo', {}).get('uuid', ''),
+            last_modified_by=app_data.get('requestInfo', {}).get('userInfo', {}).get('uuid', '')
+        )
+        workflow = Workflow.objects.create(
+            tenant_id=app_data['tenantId'],
+            business_service='BTR',
+            business_id=str(uuid.uuid4()),
+            module_name='birth-registration',
+            action='CREATE',
+            state='INITIATED',
+            created_by=app_data.get('requestInfo', {}).get('userInfo', {}).get('uuid', ''),
+            last_modified_by=app_data.get('requestInfo', {}).get('userInfo', {}).get('uuid', '')
+        )
+        birth_app = BirthRegistrationApplication.objects.create(
+            id=user_id,
+            tenant_id=app_data['tenantId'],
+            application_number=app_data.get('applicationNumber', ''),
             baby_first_name=app_data['babyFirstName'],
             baby_last_name=app_data.get('babyLastName', ''),
-            father_of_applicant=app_data['fatherOfApplicant'],
-            mother_of_applicant=app_data['motherOfApplicant'],
-            father_mobile_number=app_data.get('fatherMobileNumber', ''),
-            mother_mobile_number=app_data.get('motherMobileNumber', ''),
             doctor_name=app_data.get('doctorName', ''),
             hospital_name=app_data.get('hospitalName', ''),
             place_of_birth=app_data.get('placeOfBirth', ''),
-            time_of_birth=app_data['timeOfBirth'],
-            address=app_data['address'],
-            applicant_user_id=user_id,
-            status=app_data.get('status', 'applied')
+            time_of_birth=app_data.get('timeOfBirth'),
+            address=address,
+            father_of_applicant=father_applicant,
+            mother_of_applicant=mother_applicant,
+            audit_details=audit_details,
+            workflow=workflow
         )
 
         # Generate application number
@@ -107,6 +246,11 @@ class BirthRegistrationCreateService:
         # self._process_workflow_transition(birth_app, request_info)
 
         return birth_app, user_response
+
+
+
+
+
 
     # def _start_workflow(self, birth_app, request_info, action="APPLY"):
     #     proc_inst = ProcessInstance(

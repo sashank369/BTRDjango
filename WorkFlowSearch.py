@@ -4,7 +4,7 @@ from digit_client.models import BusinessServiceBuilder, StateBuilder, Role, User
 from digit_client import RequestConfig, RoleBuilder
 
 
-auth_token = "ed781948-9805-4dd8-a664-e8581524e8c8"
+auth_token = "9d265031-5edc-4e3e-96ca-1bb087a6a517"
 # roles=[
 #     (RoleBuilder()
 #         .with_code("CITIZEN")

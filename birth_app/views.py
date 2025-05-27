@@ -1,4 +1,5 @@
 # birth_app/views.py
+from django.forms import model_to_dict
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -28,16 +29,10 @@ def create_birth(request):
                 'applicationNumber': birth_app.application_number,
                 'babyFirstName': birth_app.baby_first_name,
                 'babyLastName': birth_app.baby_last_name,
-                'fatherOfApplicant': birth_app.father_of_applicant,
-                'motherOfApplicant': birth_app.mother_of_applicant,
-                'fatherMobileNumber': birth_app.father_mobile_number,
-                'motherMobileNumber': birth_app.mother_mobile_number,
                 'doctorName': birth_app.doctor_name,
                 'hospitalName': birth_app.hospital_name,
                 'placeOfBirth': birth_app.place_of_birth,
-                'timeOfBirth': birth_app.time_of_birth,
-                'address': birth_app.address,
-                'status': birth_app.status
+                'timeOfBirth': birth_app.time_of_birth
             }
 
             if user_response:
@@ -76,16 +71,10 @@ def update_birth(request):
                 'applicationNumber': app.application_number,
                 'babyFirstName': app.baby_first_name,
                 'babyLastName': app.baby_last_name,
-                'fatherOfApplicant': app.father_of_applicant,
-                'motherOfApplicant': app.mother_of_applicant,
-                'fatherMobileNumber': app.father_mobile_number,
-                'motherMobileNumber': app.mother_mobile_number,
                 'doctorName': app.doctor_name,
                 'hospitalName': app.hospital_name,
                 'placeOfBirth': app.place_of_birth,
-                'timeOfBirth': app.time_of_birth,
-                'address': app.address,
-                'status': app.status
+                'timeOfBirth': app.time_of_birth
             })
 
         response_data = ResponseFormatter.format_success_response(request_info, updated_apps)
@@ -121,16 +110,10 @@ def search_birth(request):
             'applicationNumber': app.application_number,
             'babyFirstName': app.baby_first_name,
             'babyLastName': app.baby_last_name,
-            'fatherOfApplicant': app.father_of_applicant,
-            'motherOfApplicant': app.mother_of_applicant,
-            'fatherMobileNumber': app.father_mobile_number,
-            'motherMobileNumber': app.mother_mobile_number,
             'doctorName': app.doctor_name,
             'hospitalName': app.hospital_name,
             'placeOfBirth': app.place_of_birth,
-            'timeOfBirth': app.time_of_birth,
-            'address': app.address,
-            'status': app.status
+            'timeOfBirth': app.time_of_birth
         } for app in apps]
 
         response_data = ResponseFormatter.format_success_response({}, applications)
