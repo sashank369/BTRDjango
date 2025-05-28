@@ -37,4 +37,5 @@ class BirthRegistrationSearchService:
             qs = qs.filter(application_number=app_num)
             
         # Return ordered results
+        
         return qs.order_by('id')

@@ -128,6 +128,8 @@ class BirthRegistrationApplication(models.Model):
     hospital_name = models.CharField(max_length=128)
     place_of_birth = models.CharField(max_length=128)
     time_of_birth = models.BigIntegerField(blank=True, null=True)
+    Father_id = models.CharField(max_length=128, null=True, blank=True)
+    Mother_id = models.CharField(max_length=128, null=True, blank=True)
 
     address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True)
     father_of_applicant = models.ForeignKey(FatherApplicant, on_delete=models.SET_NULL, null=True)

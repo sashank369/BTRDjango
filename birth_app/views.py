@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from .models import BirthRegistrationApplication
 from digit_client.request_config import RequestConfig
 from .services.birth_service import BirthRegistrationService
+from digit_client import UserService,UserSearchModelBuilder
 from .utils.response_formatter import ResponseFormatter
 
 # POST /v1/registration/_create
@@ -20,7 +21,7 @@ def create_birth(request):
         req_info_obj = RequestConfig.get_request_info()
 
         for app_data in applications:
-            birth_app, user_response = birth_service.create_birth_registration(app_data, request_info)
+            birth_app, user_father_response, user_mother_response = birth_service.create_birth_registration(app_data, request_info)
             
             # Prepare response data for this application
             app_response = {
@@ -35,8 +36,10 @@ def create_birth(request):
                 'timeOfBirth': birth_app.time_of_birth
             }
 
-            if user_response:
-                app_response['userServiceResponse'] = user_response
+            if user_father_response:
+                app_response['FatheruserServiceResponse'] = user_father_response
+            if user_mother_response:
+                app_response['MotheruserServiceResponse'] = user_mother_response
 
             created_apps.append(app_response)
 
@@ -102,19 +105,27 @@ def search_birth(request):
             ids=ids,
             app_num=app_num
         )
-        
         # Prepare response data
-        applications = [{
-            'id': app.id,
-            'tenantId': app.tenant_id,
-            'applicationNumber': app.application_number,
-            'babyFirstName': app.baby_first_name,
-            'babyLastName': app.baby_last_name,
-            'doctorName': app.doctor_name,
-            'hospitalName': app.hospital_name,
-            'placeOfBirth': app.place_of_birth,
-            'timeOfBirth': app.time_of_birth
-        } for app in apps]
+        applications = []
+        for app in apps:
+            father_details = get_father_details(app.Father_id) if app.Father_id else None
+            mother_details = get_father_details(app.Mother_id) if app.Mother_id else None
+
+            applications.append({
+                'id': app.id,
+                'tenantId': app.tenant_id,
+                'applicationNumber': app.application_number,
+                'babyFirstName': app.baby_first_name,
+                'babyLastName': app.baby_last_name,
+                'doctorName': app.doctor_name,
+                'hospitalName': app.hospital_name,
+                'placeOfBirth': app.place_of_birth,
+                'timeOfBirth': app.time_of_birth,
+                'FatherID': app.Father_id,
+                'MotherID': app.Mother_id,
+                'father': father_details,
+                'mother': mother_details,
+            })
 
         response_data = ResponseFormatter.format_success_response({}, applications)
         return Response(response_data)
@@ -122,3 +133,33 @@ def search_birth(request):
     except Exception as e:
         response_data = ResponseFormatter.format_error_response({}, str(e))
         return Response(response_data, status=400)
+
+def get_father_details(father_id):
+    try:
+        auth_token = "9d265031-5edc-4e3e-96ca-1bb087a6a517"
+        RequestConfig.initialize(
+            api_id="DIGIT-CLIENT",
+            version="1.0.0",
+            # user_info=userinfo.to_dict(),
+            auth_token=auth_token
+        )
+        user_service = UserService()
+        search_model = (
+            UserSearchModelBuilder()
+            .with_uuid([father_id])
+            .with_tenant_id("DIGITCLIENT")
+            .build()
+        )
+        response = user_service.search_users(search_model)
+        if response and 'user' in response and response['user']:
+            user_data = response['user'][0]
+            return {
+                'name': user_data.get('name'),
+                'mobileNumber': user_data.get('mobileNumber'),
+                'email': user_data.get('emailId'),
+                'aadhaarNumber': user_data.get('aadhaarNumber'),
+            }
+        print("User Response \n:",response)
+    except Exception as e:
+        print(f"Error fetching user details for ID {father_id}: {e}")
+    return None

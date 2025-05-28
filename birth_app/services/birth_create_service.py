@@ -1,5 +1,5 @@
 from ..models import BirthRegistrationApplication
-from digit_client import CitizenUserBuilder, RequestConfig, RoleBuilder
+from digit_client import CitizenUserBuilder, RequestConfig, RoleBuilder,UserSearchModelBuilder
 from digit_client.services import UserService, WorkflowV2Service
 from digit_client.models import ProcessInstance, Role, UserBuilder, StateBuilder, WorkflowActionBuilder, ProcessInstanceBuilder
 from digit_client.services.idrequest import IdRequestService
@@ -30,6 +30,7 @@ class BirthRegistrationCreateService:
         for field in required_fields:
             if not app_data.get(field):
                 raise ValueError(f"Required field '{field}' is missing")
+        # print("Validation Done\n")
             
 
 
@@ -64,7 +65,7 @@ class BirthRegistrationCreateService:
                     version="1.0.0",
                     auth_token=auth_token
                 )
-
+        # print("Config done ...\n")
 
         #-----------------------------------------------------------------------------------------------------------------------
         # #Enrichment
@@ -126,38 +127,45 @@ class BirthRegistrationCreateService:
         # Handle applicant creation if needed
         
         
-        applicant = app_data.get('fatherOfApplicant')
-        user_id = None
-        user_response = None
-        if applicant:
-            basic_citizen = (CitizenUserBuilder()
-                .with_user_name(app_data.get('fatherOfApplicant', {}).get('userName', ''))
-                .with_password("Mus@123NK")
-                .with_name("maqwkskd")
-                .with_gender("MALE")
-                .with_roles(roles)
-                .with_mobile_number("9291909291")
-                .with_tenant_id("DIGITCLIENT")
-                .build())
-            
+        # applicant = app_data.get('fatherOfApplicant')
+        # user_id = None
+        # user_response = None
+        # if applicant:
+        #     basic_citizen = (CitizenUserBuilder()
+        #         .with_user_name(app_data.get('fatherOfApplicant', {}).get('userName', ''))
+        #         .with_password("Mus@123NK")
+        #         .with_name(app_data.get('fatherOfApplicant', {}).get('name', ''))
+        #         .with_gender("MALE")
+        #         # .with_roles(app_data.get('fatherOfApplicant', {}).get('roles'))
+        #         .with_mobile_number(app_data.get('fatherOfApplicant', {}).get('mobileNumber', ''))
+        #         .with_tenant_id(app_data.get('fatherOfApplicant',{}).get('tenantId'))
+        #         .build())
+        #     # print("Father Applicant ...\n")
 
 
-            # print("basic_citizen", basic_citizen.to_dict())
-            user_response = self.user_service.create_user_no_validate(basic_citizen)
-            # user_id = user_response.get('user', {}).get('id')
-            print("user_response\n", user_response)
-            users = user_response.get('user', [])
-            user_id = users[0].get('id') if users and isinstance(users[0], dict) else None
+        #     # print("basic_citizen", basic_citizen.to_dict())
+        #     user_response = self.user_service.create_user_no_validate(basic_citizen)
+        #     # user_id = user_response.get('user', {}).get('id')
+        #     print("user_response\n", user_response)
+        #     users = user_response.get('user', [])
+        #     user_id = users[0].get('id') if users and isinstance(users[0], dict) else None
 
 
-        # print("\nuser response", user_response)
-        print("user_id:\n", user_id)
+        # # print("\nuser response", user_response)
+        # print("user_id:\n", user_id)
 
 
+        father_data = app_data.get('fatherOfApplicant')
+        mother_data = app_data.get('motherOfApplicant')
+
+        father_user_id,father_user_response,father_uuid = self._get_or_create_user(father_data, gender="MALE")
+        mother_user_id,mother_user_response,mother_uuid = self._get_or_create_user(mother_data, gender="FEMALE")
+
+        print("Father User ID:", father_user_id)
+        print("Mother User ID:", mother_user_id)
 
 
-
-
+        # user_id=father_user_id
         #-----------------------------------------------------------------------------------------------------------------------
         #Saving into database 
         address = Address.objects.create(
@@ -219,15 +227,16 @@ class BirthRegistrationCreateService:
             last_modified_by=app_data.get('requestInfo', {}).get('userInfo', {}).get('uuid', '')
         )
         birth_app = BirthRegistrationApplication.objects.create(
-            id=user_id,
             tenant_id=app_data['tenantId'],
-            application_number=app_data.get('applicationNumber', ''),
+            application_number=app_data.get('applicationNumber', ''), #This has to set by idgen
             baby_first_name=app_data['babyFirstName'],
             baby_last_name=app_data.get('babyLastName', ''),
             doctor_name=app_data.get('doctorName', ''),
             hospital_name=app_data.get('hospitalName', ''),
             place_of_birth=app_data.get('placeOfBirth', ''),
             time_of_birth=app_data.get('timeOfBirth'),
+            Father_id=father_uuid if father_uuid else None,
+            Mother_id=mother_uuid if mother_uuid else None,
             address=address,
             father_of_applicant=father_applicant,
             mother_of_applicant=mother_applicant,
@@ -238,6 +247,8 @@ class BirthRegistrationCreateService:
         # Generate application number
         birth_app.application_number = f"BTR-{birth_app.id}"
         birth_app.save()
+        
+        return birth_app, father_user_response, mother_user_response
 
         # Start initial workflow
         # self._start_workflow(birth_app, request_info)
@@ -245,7 +256,78 @@ class BirthRegistrationCreateService:
         # Process workflow transition
         # self._process_workflow_transition(birth_app, request_info)
 
-        return birth_app, user_response
+    def _get_or_create_user(self, applicant_data, gender):
+        auth_token = "9d265031-5edc-4e3e-96ca-1bb087a6a517"
+        roles=[
+            (RoleBuilder()
+                .with_code("CITIZEN")
+                .with_name("CITIZEN")
+                .with_tenant_id("DIGITCLIENT")
+                .build()),
+            (RoleBuilder()
+                .with_code("EMPLOYEE")
+                .with_name("EMPLOYEE")
+                .with_tenant_id("DIGITCLIENT")
+                .build()),
+            (RoleBuilder()
+                .with_code("ADMIN") 
+                .with_name("Administrator")
+                .with_tenant_id("DIGITCLIENT")
+                .build()),
+            (RoleBuilder()
+                .with_code("SUPERUSER") 
+                .with_name("Super User")
+                .with_tenant_id("DIGITCLIENT")
+                .build())
+        ]
+        RequestConfig.initialize(
+                    api_id="DIGIT-CLIENT",
+                    version="1.0.0",
+                    auth_token=auth_token
+                )
+        
+        user_id = None
+
+        if not applicant_data:
+            return None
+
+        # Step 1: Check if user exists
+        search_model = (
+            UserSearchModelBuilder()
+            .with_mobile_number(applicant_data.get('mobileNumber', ''))
+            .with_tenant_id(applicant_data.get('tenantId', ''))
+            .build()
+        )
+        search_response = self.user_service.search_users(search_model)
+
+        users = search_response.get('user', [])
+        if users and isinstance(users[0], dict):
+            user_id = users[0].get('id')
+            user_uuid = users[0].get('uuid')
+            print(f"User already exists with id: {user_id}")
+            return user_id,search_response,user_uuid
+
+        # Step 2: Create user if not found
+        basic_citizen = (
+            CitizenUserBuilder()
+            .with_user_name(applicant_data.get('userName', ''))
+            .with_password("Mus@123NK")
+            .with_name(applicant_data.get('name', ''))
+            .with_gender(gender)
+            .with_roles(roles)
+            .with_mobile_number(applicant_data.get('mobileNumber', ''))
+            .with_tenant_id(applicant_data.get('tenantId'))
+            .build()
+        )
+
+        user_response = self.user_service.create_user_no_validate(basic_citizen)
+        print("New User Response:", user_response)
+        users = user_response.get('user', [])
+        user_id = users[0].get('id') if users and isinstance(users[0], dict) else None
+        user_uuid = users[0].get('uuid') if users and isinstance(users[0], dict) else None
+
+        print(f"Created new user with id: {user_id}")
+        return user_id,user_response,user_uuid
 
 
 
@@ -339,3 +421,9 @@ class BirthRegistrationCreateService:
     #     )
         
     #     print("Transition Result:", result) 
+
+
+
+        
+
+    
